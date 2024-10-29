@@ -3,7 +3,6 @@
 import * as vscode from 'vscode';
 import { ofetch } from "ofetch";
 
-const fetch = ofetch.native;
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -16,18 +15,17 @@ export function activate(context: vscode.ExtensionContext) {
 
 	const getPublishers = async() => {
 		const config = vscode.workspace.getConfiguration("magiedit-vscode");
-		const res = await fetch(`${config.get('url')}/api/publishers`, {
+		const res = await ofetch<{publishers: Array<{name: string, id:number}>}>(`${config.get('url')}/api/publishers`, {
 			headers: {
 				'authorization': `Bearer ${config.get('api_key')}`
 			}
 		});
-		const data = await res.json() as {publishers: Array<{name: string, id:number}>};
-		return data.publishers;
+		return res.publishers;
 	};
 
 	const publish = async(publishers: Array<number>, content: string) => {
 		const config = vscode.workspace.getConfiguration("magiedit-vscode");
-		const res = await fetch(`${config.get('url')}/api/publishers/publish`, {
+		const res = await ofetch<{status: Record<string, boolean>}>(`${config.get('url')}/api/publishers/publish`, {
 			method: "POST",
 			headers: {
 				'authorization': `Bearer ${config.get('api_key')}`,
@@ -38,8 +36,7 @@ export function activate(context: vscode.ExtensionContext) {
 				publishers
 			})
 		});
-		const data = await res.json() as {status: Record<string, boolean>};
-		return data.status;
+		return res.status;
 	};
 
 	context.subscriptions.push(vscode.commands.registerCommand('magiedit-vscode.check', () => {
