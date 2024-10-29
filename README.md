@@ -1,6 +1,4 @@
-# magiedit-vscode README
-
-This is the README for your extension "magiedit-vscode". After writing up a brief description, we recommend including the following sections.
+# Magiedit-VSCode
 
 ## Features
 

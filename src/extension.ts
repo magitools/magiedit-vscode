@@ -1,29 +1,45 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import {ofetch} from "ofetch";
+import { ofetch } from "ofetch";
+
+const fetch = ofetch.native;
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "magiedit-vscode" is now active!');
-
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('magiedit-vscode.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from magiedit-vscode!');
-	});
-	context.subscriptions.push(disposable);
-
 	const checkConfig = (): boolean => {
 		const config = vscode.workspace.getConfiguration("magiedit-vscode");
 		return config.get('url') !== undefined && config.get('api_key') !== undefined;
+	};
+
+	const getPublishers = async() => {
+		const config = vscode.workspace.getConfiguration("magiedit-vscode");
+		const res = await fetch(`${config.get('url')}/api/publishers`, {
+			headers: {
+				'authorization': `Bearer ${config.get('api_key')}`
+			}
+		});
+		const data = await res.json() as {publishers: Array<{name: string, id:number}>};
+		return data.publishers;
+	};
+
+	const publish = async(publishers: Array<number>, content: string) => {
+		const config = vscode.workspace.getConfiguration("magiedit-vscode");
+		const res = await fetch(`${config.get('url')}/api/publishers/publish`, {
+			method: "POST",
+			headers: {
+				'authorization': `Bearer ${config.get('api_key')}`,
+				'content-type': 'application/json'
+			},
+			body: JSON.stringify({
+				content,
+				publishers
+			})
+		});
+		const data = await res.json() as {status: Record<string, boolean>};
+		return data.status;
 	};
 
 	context.subscriptions.push(vscode.commands.registerCommand('magiedit-vscode.check', () => {
@@ -36,7 +52,6 @@ export function activate(context: vscode.ExtensionContext) {
 	}));
 
 	context.subscriptions.push(vscode.commands.registerCommand('magiedit-vscode.publish', async() => {
-		const config = vscode.workspace.getConfiguration("magiedit-vscode");
 		if (!checkConfig()) {
 			vscode.window.showErrorMessage("Invalid configuration detected! Please verify magiedit's extension settings");
 			return;
@@ -53,14 +68,8 @@ export function activate(context: vscode.ExtensionContext) {
 		const publishers = await vscode.window.withProgress({
 			title: "Fetching Publishers",
 			location: vscode.ProgressLocation.Notification
-		}, async(progress) => {
-			const res = await ofetch<{publishers: Array<{name: string, id:number}>}>(`${config.get('url')}/api/publishers`, {
-				headers: {
-					'authorization': `Bearer ${config.get('api_key')}`
-				}
-			});
-			progress.report({message: "Got publishers, parsing...", increment: 50});
-			return res.publishers;
+		}, async() => {
+			return await getPublishers();
 		} );
 
 		const selection = await vscode.window.showQuickPick(publishers.map((e) => e.name), {
@@ -72,21 +81,10 @@ export function activate(context: vscode.ExtensionContext) {
 				location: vscode.ProgressLocation.Notification
 			}, async() => {
 				const content = editor.document.getText();
-				const res = await ofetch(`${config.get('url')}/api/publishers/publish`, {
-					method: "POST",
-					headers: {
-						'authorization': `Bearer ${config.get('api_key')}`
-					},
-					body: {
-						content,
-						publishers: publishers.filter((e) => selection?.includes(e.name)).map((e) => e.id) 
-					}
-				});
-				console.log(res);
-				return res;
+				return await publish(publishers.filter((e) => selection?.includes(e.name)).map((e) => e.id), content);
 			});
-			vscode.window.showInformationMessage(`Published article with selected providers; here's the result\n${Object.keys(res.status).map((k) => {
-				return k + ": " + res.status[k];
+			vscode.window.showInformationMessage(`Published article with selected providers; here's the result\n${Object.keys(res).map((k) => {
+				return k + ": " + res[k];
 			})}`);
 	}));
 }
