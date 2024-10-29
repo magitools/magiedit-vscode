@@ -1,6 +1,7 @@
 {
   "name": "magiedit-vscode",
   "displayName": "Magiedit",
+  "publisher": "Magitools",
   "description": "a magiedit extension for vscode",
   "version": "0.0.1",
   "repository": {
