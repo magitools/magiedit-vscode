@@ -3,6 +3,10 @@
   "displayName": "Magiedit",
   "description": "a magiedit extension for vscode",
   "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/magitools/magiedit-vscode.git"
+  },
   "engines": {
     "vscode": "^1.94.0"
   },
